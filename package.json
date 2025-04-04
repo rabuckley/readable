@@ -1,0 +1,37 @@
+{
+  "name": "readable",
+  "version": "1.0.0",
+  "description": "A browser extension that extracts the contents of a page and displays it in a common readable format.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && npm run build:css",
+    "build:css": "tailwindcss -i ./src/index.css -o ./dist/content.css",
+    "build:ext": "npm run build && web-ext build --source-dir=dist --artifacts-dir=extension",
+    "start": "web-ext run --source-dir=dist"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.2",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/chrome": "^0.0.313",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "tailwindcss": "^4.1.2",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.5",
+    "web-ext": "^8.5.0"
+  }
+}
