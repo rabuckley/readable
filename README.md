@@ -13,6 +13,7 @@ A browser extension that transforms cluttered web pages into clean, distraction-
 ## How It Works
 
 Readable runs entirely in your browser. When activated:
+
 1. It clones the current page
 2. Extracts the meaningful content using Readability
 3. Renders a clean version with React and Tailwind CSS
