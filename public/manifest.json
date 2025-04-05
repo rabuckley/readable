@@ -12,6 +12,9 @@
   },
   "background": {
     "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ],
     "type": "module"
   },
   "content_scripts": [
@@ -29,8 +32,12 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

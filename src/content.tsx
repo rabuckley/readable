@@ -7,8 +7,12 @@ import "./index.css";
 // Track whether the readable view is currently open
 let isReadableViewOpen = false;
 
+// Use browser namespace for Firefox compatibility
+declare const browser: typeof chrome;
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
 // Listen for message from background script
-chrome.runtime.onMessage.addListener((message: { action: string }) => {
+browserAPI.runtime.onMessage.addListener((message: { action: string }) => {
   if (message.action === "makeReadable") {
     // Toggle the readable view state
     if (isReadableViewOpen) {
@@ -64,7 +68,7 @@ async function createReadableView() {
     const style = document.createElement("style");
     // Include necessary CSS from index.css
     style.textContent = `
-      @import url('${chrome.runtime.getURL("assets/content.css")}');
+      @import url('${browserAPI.runtime.getURL("assets/content.css")}');
 
       :host {
         all: initial;
