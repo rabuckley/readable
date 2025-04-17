@@ -2,7 +2,6 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { Readability } from "@mozilla/readability";
 import ReadableContent from "./ReadableContent";
-import "./index.css";
 
 // Track whether the readable view is currently open
 let isReadableViewOpen = false;
