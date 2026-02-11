@@ -4,7 +4,7 @@ const browserAPI = typeof browser !== "undefined" ? browser : chrome;
 
 export interface ReadableSettings {
   fontSize: "small" | "medium" | "large";
-  theme: "light" | "dark" | "sepia" | "auto";
+  theme: "light" | "dark" | "auto";
   width: "narrow" | "medium" | "wide";
 }
 

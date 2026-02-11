@@ -8,23 +8,11 @@
 
 @theme {
   --color-oat-50: oklch(0.98 0.005 95);
-  --color-sepia-bg: oklch(0.95 0.02 80);
-  --color-sepia-text: oklch(0.25 0.02 60);
 }
 
 :focus-visible {
   outline: 2px solid oklch(0.55 0.15 250);
   outline-offset: 2px;
-}
-
-/* Sepia theme overrides — applied when the `.sepia` class is on the
-   root container. */
-.sepia {
-  --color-oat-50: var(--color-sepia-bg);
-}
-
-.sepia .prose {
-  color: var(--color-sepia-text);
 }
 
 /* Let Tailwind prose control pre/code backgrounds rather than the
@@ -86,33 +74,3 @@ pre code.hljs {
   background-color: rgba(248, 81, 73, 0.15);
 }
 
-/* Sepia-mode syntax highlighting: slightly warmed token colors. */
-.sepia .hljs {
-  color: #3d3527;
-}
-
-.sepia .hljs-comment,
-.sepia .hljs-quote {
-  color: #8a7e6b;
-}
-
-.sepia .hljs-keyword,
-.sepia .hljs-selector-tag {
-  color: #9c3d2e;
-}
-
-.sepia .hljs-string,
-.sepia .hljs-doctag {
-  color: #2e5a3f;
-}
-
-.sepia .hljs-number,
-.sepia .hljs-literal {
-  color: #3d6080;
-}
-
-.sepia .hljs-title,
-.sepia .hljs-title.class_,
-.sepia .hljs-title.function_ {
-  color: #6b4080;
-}

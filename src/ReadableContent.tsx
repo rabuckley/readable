@@ -191,14 +191,10 @@ function useAutoTheme(
     if (!el) return;
 
     // Apply class-based theme to the container.
-    el.classList.remove("dark", "sepia");
+    el.classList.remove("dark");
 
     if (theme === "dark") {
       el.classList.add("dark");
-      return;
-    }
-    if (theme === "sepia") {
-      el.classList.add("sepia");
       return;
     }
     if (theme === "light") {
@@ -222,7 +218,6 @@ const THEME_OPTIONS: { value: ReadableSettings["theme"]; label: string }[] = [
   { value: "auto", label: "Auto" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
-  { value: "sepia", label: "Sepia" },
 ];
 
 const WIDTH_OPTIONS: { value: ReadableSettings["width"]; label: string }[] = [
@@ -231,12 +226,20 @@ const WIDTH_OPTIONS: { value: ReadableSettings["width"]; label: string }[] = [
   { value: "wide", label: "Wide" },
 ];
 
-const toolbarBtnBase =
-  "cursor-pointer rounded border-none px-2 py-1 text-sm transition-colors";
-const toolbarBtnInactive =
+const FONT_SIZE_LABELS: Record<ReadableSettings["fontSize"], string> = {
+  small: "S",
+  medium: "M",
+  large: "L",
+};
+
+const sidebarBtnBase =
+  "cursor-pointer rounded border-none p-1.5 text-xs transition-colors w-9 h-7 flex items-center justify-center";
+const sidebarBtnInactive =
   "bg-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700";
-const toolbarBtnActive =
+const sidebarBtnActive =
   "bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100";
+const sidebarDivider =
+  "w-6 border-t border-neutral-300 dark:border-neutral-600";
 
 // Component
 
@@ -335,25 +338,31 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
       aria-label="Readable article view"
       className="bg-oat-50 min-h-screen dark:bg-neutral-900"
     >
-      {/* Settings toolbar */}
-      <div className="sticky top-0 z-[10000] flex flex-wrap items-center justify-center gap-2 border-b border-neutral-200 bg-neutral-100/90 px-4 py-2 text-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-800/90">
+      {/* Vertical sidebar controls */}
+      <nav
+        aria-label="Reading settings"
+        className="fixed left-0 top-0 z-[10000] flex h-full w-12 flex-col items-center justify-center gap-1.5 border-r border-neutral-200 bg-neutral-100/90 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-800/90"
+      >
         {/* Font size controls */}
         <button
           onClick={() => changeFontSize("decrease")}
           aria-label="Decrease font size"
-          className={`${toolbarBtnBase} ${toolbarBtnInactive}`}
+          className={`${sidebarBtnBase} ${sidebarBtnInactive}`}
         >
           A&minus;
         </button>
+        <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
+          {FONT_SIZE_LABELS[settings.fontSize]}
+        </span>
         <button
           onClick={() => changeFontSize("increase")}
           aria-label="Increase font size"
-          className={`${toolbarBtnBase} ${toolbarBtnInactive}`}
+          className={`${sidebarBtnBase} ${sidebarBtnInactive}`}
         >
           A+
         </button>
 
-        <span className="text-neutral-300 dark:text-neutral-600">|</span>
+        <div className={sidebarDivider} />
 
         {/* Theme controls */}
         {THEME_OPTIONS.map((opt) => (
@@ -361,13 +370,13 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
             key={opt.value}
             onClick={() => update("theme", opt.value)}
             aria-pressed={settings.theme === opt.value}
-            className={`${toolbarBtnBase} ${settings.theme === opt.value ? toolbarBtnActive : toolbarBtnInactive}`}
+            className={`${sidebarBtnBase} ${settings.theme === opt.value ? sidebarBtnActive : sidebarBtnInactive}`}
           >
             {opt.label}
           </button>
         ))}
 
-        <span className="text-neutral-300 dark:text-neutral-600">|</span>
+        <div className={sidebarDivider} />
 
         {/* Width controls */}
         {WIDTH_OPTIONS.map((opt) => (
@@ -375,34 +384,34 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
             key={opt.value}
             onClick={() => update("width", opt.value)}
             aria-pressed={settings.width === opt.value}
-            className={`${toolbarBtnBase} ${settings.width === opt.value ? toolbarBtnActive : toolbarBtnInactive}`}
+            className={`${sidebarBtnBase} ${settings.width === opt.value ? sidebarBtnActive : sidebarBtnInactive}`}
           >
             {opt.label}
           </button>
         ))}
 
-        <span className="text-neutral-300 dark:text-neutral-600">|</span>
+        <div className={sidebarDivider} />
 
-        {/* Close button (moved from fixed position into toolbar) */}
+        {/* Close button */}
         <button
           onClick={onClose}
           aria-label="Close readable view"
-          className={`${toolbarBtnBase} ${toolbarBtnInactive}`}
+          className={`${sidebarBtnBase} ${sidebarBtnInactive}`}
         >
           &times;
         </button>
-      </div>
+      </nav>
 
-      {/* Article content */}
+      {/* Article content — left padding avoids overlap with fixed sidebar */}
       <div
-        className="grid gap-4"
+        className="grid gap-4 pl-12"
         style={{
           gridTemplateColumns: `1fr minmax(0, ${WIDTH_VALUES[settings.width]}) 1fr`,
         }}
       >
         <div
           ref={contentRef}
-          className="prose prose-neutral dark:prose-invert md:prose-lg prose-blockquote:not-italic prose-headings:font-semibold prose-headings:font-sans prose-lead:text-neutral-900 dark:prose-lead:text-neutral-300 prose-pre:bg-neutral-100 prose-pre:text-neutral-800 dark:prose-pre:text-neutral-300 dark:prose-pre:bg-neutral-800 prose-code:font-medium prose-code:font-mono col-span-1 col-start-2 my-12 font-serif"
+          className="prose prose-neutral max-w-none dark:prose-invert md:prose-lg prose-blockquote:not-italic prose-headings:font-semibold prose-headings:font-sans prose-lead:text-neutral-900 dark:prose-lead:text-neutral-300 prose-pre:bg-neutral-100 prose-pre:text-neutral-800 dark:prose-pre:text-neutral-300 dark:prose-pre:bg-neutral-800 prose-code:font-medium prose-code:font-mono col-span-1 col-start-2 my-12 font-serif"
           style={{ fontSize: FONT_SIZE_VALUES[settings.fontSize] }}
         >
           <h1>{title}</h1>
