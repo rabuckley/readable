@@ -14,6 +14,9 @@ import go from "highlight.js/lib/languages/go";
 import rust from "highlight.js/lib/languages/rust";
 import c from "highlight.js/lib/languages/c";
 import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import diff from "highlight.js/lib/languages/diff";
+import x86asm from "highlight.js/lib/languages/x86asm";
 import ruby from "highlight.js/lib/languages/ruby";
 import php from "highlight.js/lib/languages/php";
 import type { ReadableSettings } from "./settings";
@@ -33,6 +36,9 @@ hljs.registerLanguage("go", go);
 hljs.registerLanguage("rust", rust);
 hljs.registerLanguage("c", c);
 hljs.registerLanguage("cpp", cpp);
+hljs.registerLanguage("csharp", csharp);
+hljs.registerLanguage("diff", diff);
+hljs.registerLanguage("x86asm", x86asm);
 hljs.registerLanguage("ruby", ruby);
 hljs.registerLanguage("php", php);
 
@@ -273,10 +279,18 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
   // article content renders or when the content changes.
   useEffect(() => {
     contentRef.current?.querySelectorAll("pre code").forEach((block) => {
+      const el = block as HTMLElement;
       // Avoid re-highlighting blocks that highlight.js already processed.
-      if (!(block as HTMLElement).dataset.highlighted) {
-        hljs.highlightElement(block as HTMLElement);
+      if (el.dataset.highlighted) return;
+
+      // Restore the language class from the data attribute we stashed before
+      // Readability stripped CSS classes. This gives highlight.js a
+      // deterministic language hint instead of relying on auto-detection.
+      if (el.dataset.language) {
+        el.classList.add(`language-${el.dataset.language}`);
       }
+
+      hljs.highlightElement(el);
     });
   }, [content]);
 

@@ -46,6 +46,36 @@ browserAPI.runtime.onMessage.addListener((message: { action: string }) => {
 
 const STYLESHEET_TIMEOUT_MS = 5_000;
 
+// Matches `language-*` and `lang-*` class tokens used by highlight.js, Prism,
+// and similar syntax highlighters. Readability strips all CSS classes, so we
+// stash the language in a data attribute before parsing.
+const LANGUAGE_CLASS_RE = /\blang(?:uage)?-([\w-]+)\b/;
+
+/**
+ * Preserve syntax-highlighting language hints that would otherwise be lost
+ * when Readability strips CSS classes. For each `<code>` element, extract
+ * the language identifier from `language-*` / `lang-*` classes (checking
+ * the element itself then its parent, since sites vary) and store it as
+ * `data-language`. Both Readability and DOMPurify leave data attributes
+ * intact, and we restore the class before highlight.js runs.
+ */
+function preserveLanguageHints(doc: Document): void {
+  for (const code of doc.querySelectorAll("code")) {
+    // Readability strips CSS classes from all elements, which destroys any
+    // existing syntax highlighting (e.g. `hljs-keyword` spans become bare
+    // `<span>`s). Remove the "already highlighted" marker so highlight.js
+    // will re-process the block from scratch after rendering.
+    code.removeAttribute("data-highlighted");
+
+    const match =
+      LANGUAGE_CLASS_RE.exec(code.className) ??
+      LANGUAGE_CLASS_RE.exec(code.parentElement?.className ?? "");
+    if (match) {
+      code.setAttribute("data-language", match[1]);
+    }
+  }
+}
+
 /**
  * Wait for a stylesheet `<link>` to finish loading inside a shadow root.
  * Resolves once the browser has fetched and applied the CSS, preventing a
@@ -187,6 +217,7 @@ async function createReadableView() {
  */
 function parseArticle() {
   const documentClone = document.cloneNode(true) as Document;
+  preserveLanguageHints(documentClone);
   const reader = new Readability(documentClone);
   return reader.parse();
 }
