@@ -1,5 +1,5 @@
-import type { FunctionalComponent } from "preact";
-import { useEffect, useRef, useState, useCallback } from "preact/hooks";
+import type { FC, RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import typescript from "highlight.js/lib/languages/typescript";
@@ -21,6 +21,16 @@ import ruby from "highlight.js/lib/languages/ruby";
 import php from "highlight.js/lib/languages/php";
 import type { ReadableSettings } from "./settings";
 import { saveSettings } from "./settings";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
+import { Minus, Plus, Sun, Moon, Monitor, X } from "lucide-react";
 
 // Register languages once at module load.
 hljs.registerLanguage("javascript", javascript);
@@ -87,7 +97,7 @@ interface ReadableContentProps {
  * avoiding premature abstraction.
  */
 function useFocusTrap(
-  containerRef: preact.RefObject<HTMLDivElement | null>,
+  containerRef: RefObject<HTMLDivElement | null>,
   onClose: () => void,
   onFontSizeChange: (direction: "increase" | "decrease") => void,
 ) {
@@ -99,7 +109,7 @@ function useFocusTrap(
     previousFocusRef.current = document.activeElement;
 
     // Focus the first focusable element (the close button) inside the
-    // overlay. We need a short delay because Preact may not have flushed
+    // overlay. We need a short delay because React may not have flushed
     // the DOM synchronously when running inside a shadow root.
     requestAnimationFrame(() => {
       const root = containerRef.current?.getRootNode() as
@@ -183,7 +193,7 @@ function useFocusTrap(
  * class on the container element accordingly.
  */
 function useAutoTheme(
-  containerRef: preact.RefObject<HTMLDivElement | null>,
+  containerRef: RefObject<HTMLDivElement | null>,
   theme: ReadableSettings["theme"],
 ) {
   useEffect(() => {
@@ -214,16 +224,58 @@ function useAutoTheme(
 
 // Settings Toolbar
 
-const THEME_OPTIONS: { value: ReadableSettings["theme"]; label: string }[] = [
-  { value: "auto", label: "Auto" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+const THEME_OPTIONS: {
+  value: ReadableSettings["theme"];
+  label: string;
+  icon: FC<{ className?: string }>;
+}[] = [
+  { value: "auto", label: "Auto theme", icon: Monitor },
+  { value: "light", label: "Light theme", icon: Sun },
+  { value: "dark", label: "Dark theme", icon: Moon },
 ];
 
-const WIDTH_OPTIONS: { value: ReadableSettings["width"]; label: string }[] = [
-  { value: "narrow", label: "Narrow" },
-  { value: "medium", label: "Medium" },
-  { value: "wide", label: "Wide" },
+// Content-width icon — three centered horizontal bars at different
+// lengths to suggest narrow, medium, or wide article width.
+function WidthIcon({ variant }: { variant: ReadableSettings["width"] }) {
+  const barWidths = {
+    narrow: [7, 5, 7],
+    medium: [11, 8, 11],
+    wide: [14, 12, 14],
+  }[variant];
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor">
+      <rect
+        x={(16 - barWidths[0]) / 2}
+        y="3"
+        width={barWidths[0]}
+        height="2"
+        rx="1"
+      />
+      <rect
+        x={(16 - barWidths[1]) / 2}
+        y="7"
+        width={barWidths[1]}
+        height="2"
+        rx="1"
+      />
+      <rect
+        x={(16 - barWidths[2]) / 2}
+        y="11"
+        width={barWidths[2]}
+        height="2"
+        rx="1"
+      />
+    </svg>
+  );
+}
+
+const WIDTH_OPTIONS: {
+  value: ReadableSettings["width"];
+  label: string;
+}[] = [
+  { value: "narrow", label: "Narrow width" },
+  { value: "medium", label: "Medium width" },
+  { value: "wide", label: "Wide width" },
 ];
 
 const FONT_SIZE_LABELS: Record<ReadableSettings["fontSize"], string> = {
@@ -232,18 +284,9 @@ const FONT_SIZE_LABELS: Record<ReadableSettings["fontSize"], string> = {
   large: "L",
 };
 
-const sidebarBtnBase =
-  "cursor-pointer rounded border-none p-1.5 text-xs transition-colors w-9 h-7 flex items-center justify-center";
-const sidebarBtnInactive =
-  "bg-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700";
-const sidebarBtnActive =
-  "bg-neutral-200 text-neutral-900 dark:bg-neutral-700 dark:text-neutral-100";
-const sidebarDivider =
-  "w-6 border-t border-neutral-300 dark:border-neutral-600";
-
 // Component
 
-const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
+const ReadableContent: FC<ReadableContentProps> = ({
   title,
   content,
   byline,
@@ -253,22 +296,18 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
   onClose,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<ReadableSettings>(initialSettings);
 
-  const changeFontSize = useCallback(
-    (direction: "increase" | "decrease") => {
-      setSettings((prev) => {
-        const idx = FONT_SIZES.indexOf(prev.fontSize);
-        const next =
-          direction === "increase"
-            ? Math.min(idx + 1, FONT_SIZES.length - 1)
-            : Math.max(idx - 1, 0);
-        return { ...prev, fontSize: FONT_SIZES[next] };
-      });
-    },
-    [],
-  );
+  const changeFontSize = useCallback((direction: "increase" | "decrease") => {
+    setSettings((prev) => {
+      const idx = FONT_SIZES.indexOf(prev.fontSize);
+      const next =
+        direction === "increase"
+          ? Math.min(idx + 1, FONT_SIZES.length - 1)
+          : Math.max(idx - 1, 0);
+      return { ...prev, fontSize: FONT_SIZES[next] };
+    });
+  }, []);
 
   useFocusTrap(containerRef, onClose, changeFontSize);
   useAutoTheme(containerRef, settings.theme);
@@ -278,23 +317,32 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
     saveSettings(settings);
   }, [settings]);
 
-  // Syntax highlighting: run highlight.js over code blocks after the
-  // article content renders or when the content changes.
-  useEffect(() => {
-    contentRef.current?.querySelectorAll("pre code").forEach((block) => {
-      const el = block as HTMLElement;
-      // Avoid re-highlighting blocks that highlight.js already processed.
-      if (el.dataset.highlighted) return;
+  // Syntax highlighting: pre-process the content HTML so highlighted
+  // markup is part of the React-managed string. This avoids the previous
+  // approach of mutating the DOM after render via useEffect, which was
+  // fragile — if React re-wrote the innerHTML during reconciliation
+  // (e.g. after a settings change), the hljs spans were lost and the
+  // effect wouldn't re-run because `content` hadn't changed.
+  const highlightedContent = useMemo(() => {
+    if (!content) return content;
 
-      // Restore the language class from the data attribute we stashed before
-      // Readability stripped CSS classes. This gives highlight.js a
-      // deterministic language hint instead of relying on auto-detection.
+    const container = document.createElement("div");
+    container.innerHTML = content;
+
+    container.querySelectorAll("pre code").forEach((block) => {
+      const el = block as HTMLElement;
+
+      // Restore the language class from the data attribute we stashed
+      // before Readability stripped CSS classes. This gives highlight.js
+      // a deterministic language hint instead of relying on auto-detection.
       if (el.dataset.language) {
         el.classList.add(`language-${el.dataset.language}`);
       }
 
       hljs.highlightElement(el);
     });
+
+    return container.innerHTML;
   }, [content]);
 
   const readingTime = content ? estimateReadingTime(content) : 0;
@@ -312,19 +360,19 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
         role="dialog"
         aria-modal={true}
         aria-label="Readable article view"
-        className="bg-oat-50 flex min-h-screen items-center justify-center dark:bg-neutral-900"
+        className="bg-oat-50 text-foreground flex min-h-screen items-center justify-center dark:bg-neutral-900"
       >
         <div className="max-w-md text-center">
           <p className="mb-6 text-lg text-neutral-700 dark:text-neutral-300">
             {errorMessage}
           </p>
-          <button
+          <Button
             onClick={onClose}
             aria-label="Close readable view"
-            className="cursor-pointer rounded-lg border-none bg-neutral-700 px-6 py-2 text-white dark:bg-neutral-300 dark:text-neutral-900"
+            variant="secondary"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -336,71 +384,111 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
       role="dialog"
       aria-modal={true}
       aria-label="Readable article view"
-      className="bg-oat-50 min-h-screen dark:bg-neutral-900"
+      className="bg-oat-50 text-foreground min-h-screen dark:bg-neutral-900"
     >
       {/* Vertical sidebar controls */}
-      <nav
-        aria-label="Reading settings"
-        className="fixed left-0 top-0 z-[10000] flex h-full w-12 flex-col items-center justify-center gap-1.5 border-r border-neutral-200 bg-neutral-100/90 backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-800/90"
-      >
-        {/* Font size controls */}
-        <button
-          onClick={() => changeFontSize("decrease")}
-          aria-label="Decrease font size"
-          className={`${sidebarBtnBase} ${sidebarBtnInactive}`}
+      <TooltipProvider delayDuration={200}>
+        <nav
+          aria-label="Reading settings"
+          className="border-border fixed top-0 left-0 z-10000 flex h-full w-12 flex-col items-center justify-center gap-1.5 border-r bg-neutral-100/90 backdrop-blur-sm dark:bg-neutral-800/90"
         >
-          A&minus;
-        </button>
-        <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
-          {FONT_SIZE_LABELS[settings.fontSize]}
-        </span>
-        <button
-          onClick={() => changeFontSize("increase")}
-          aria-label="Increase font size"
-          className={`${sidebarBtnBase} ${sidebarBtnInactive}`}
-        >
-          A+
-        </button>
+          {/* Font size controls */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => changeFontSize("decrease")}
+                aria-label="Decrease font size"
+              >
+                <Minus />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Smaller text</TooltipContent>
+          </Tooltip>
+          <span className="text-muted-foreground text-[10px] font-medium">
+            {FONT_SIZE_LABELS[settings.fontSize]}
+          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => changeFontSize("increase")}
+                aria-label="Increase font size"
+              >
+                <Plus />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Larger text</TooltipContent>
+          </Tooltip>
 
-        <div className={sidebarDivider} />
+          <Separator className="w-6" />
 
-        {/* Theme controls */}
-        {THEME_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => update("theme", opt.value)}
-            aria-pressed={settings.theme === opt.value}
-            className={`${sidebarBtnBase} ${settings.theme === opt.value ? sidebarBtnActive : sidebarBtnInactive}`}
+          {/* Theme controls */}
+          <ToggleGroup
+            type="single"
+            value={settings.theme}
+            onValueChange={(value: string) => {
+              if (value) update("theme", value as ReadableSettings["theme"]);
+            }}
+            className="flex-col"
+            size="sm"
           >
-            {opt.label}
-          </button>
-        ))}
+            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+              <Tooltip key={value}>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value={value} aria-label={label}>
+                    <Icon />
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent side="right">{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </ToggleGroup>
 
-        <div className={sidebarDivider} />
+          <Separator className="w-6" />
 
-        {/* Width controls */}
-        {WIDTH_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => update("width", opt.value)}
-            aria-pressed={settings.width === opt.value}
-            className={`${sidebarBtnBase} ${settings.width === opt.value ? sidebarBtnActive : sidebarBtnInactive}`}
+          {/* Width controls */}
+          <ToggleGroup
+            type="single"
+            value={settings.width}
+            onValueChange={(value: string) => {
+              if (value) update("width", value as ReadableSettings["width"]);
+            }}
+            className="flex-col"
+            size="sm"
           >
-            {opt.label}
-          </button>
-        ))}
+            {WIDTH_OPTIONS.map(({ value, label }) => (
+              <Tooltip key={value}>
+                <TooltipTrigger asChild>
+                  <ToggleGroupItem value={value} aria-label={label}>
+                    <WidthIcon variant={value} />
+                  </ToggleGroupItem>
+                </TooltipTrigger>
+                <TooltipContent side="right">{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </ToggleGroup>
 
-        <div className={sidebarDivider} />
+          <Separator className="w-6" />
 
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          aria-label="Close readable view"
-          className={`${sidebarBtnBase} ${sidebarBtnInactive}`}
-        >
-          &times;
-        </button>
-      </nav>
+          {/* Close button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                aria-label="Close readable view"
+              >
+                <X />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Close</TooltipContent>
+          </Tooltip>
+        </nav>
+      </TooltipProvider>
 
       {/* Article content — left padding avoids overlap with fixed sidebar */}
       <div
@@ -410,8 +498,7 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
         }}
       >
         <div
-          ref={contentRef}
-          className="prose prose-neutral max-w-none dark:prose-invert md:prose-lg prose-blockquote:not-italic prose-headings:font-semibold prose-headings:font-sans prose-lead:text-neutral-900 dark:prose-lead:text-neutral-300 prose-pre:bg-neutral-100 prose-pre:text-neutral-800 dark:prose-pre:text-neutral-300 dark:prose-pre:bg-neutral-800 prose-code:font-medium prose-code:font-mono col-span-1 col-start-2 my-12 font-serif"
+          className="prose prose-neutral dark:prose-invert md:prose-lg prose-blockquote:not-italic prose-headings:font-semibold prose-headings:font-sans prose-lead:text-neutral-900 dark:prose-lead:text-neutral-300 prose-pre:bg-neutral-100 prose-pre:text-neutral-800 dark:prose-pre:text-neutral-300 dark:prose-pre:bg-neutral-800 prose-code:font-medium prose-code:font-mono col-span-1 col-start-2 my-12 max-w-none font-serif"
           style={{ fontSize: FONT_SIZE_VALUES[settings.fontSize] }}
         >
           <h1>{title}</h1>
@@ -426,7 +513,7 @@ const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
               {readingTime > 0 && <span>{readingTime} min read</span>}
             </div>
           )}
-          <div dangerouslySetInnerHTML={{ __html: content }} />
+          <div dangerouslySetInnerHTML={{ __html: highlightedContent }} />
         </div>
       </div>
     </div>

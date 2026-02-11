@@ -1,4 +1,4 @@
-import { render } from "preact";
+import { createRoot, type Root } from "react-dom/client";
 import { Readability } from "@mozilla/readability";
 import DOMPurify from "dompurify";
 import ReadableContent from "./ReadableContent";
@@ -10,9 +10,9 @@ import { loadSettings } from "./settings";
 let isReadableViewOpen = false;
 let isTransitioning = false;
 
-// Hold a reference to the Preact app container so we can unmount on close,
-// avoiding a memory leak from orphaned subscriptions and internal state.
-let appContainer: HTMLElement | null = null;
+// Hold a reference to the React root so we can unmount on close, avoiding a
+// memory leak from orphaned subscriptions and internal state.
+let reactRoot: Root | null = null;
 
 // Use browser namespace for Firefox compatibility
 declare const browser: typeof chrome;
@@ -121,7 +121,7 @@ async function createReadableView() {
   container.style.padding = "0";
   container.style.margin = "0";
   container.style.fontFamily = "sans-serif";
-  // Intentionally no backgroundColor here — the Preact component handles
+  // Intentionally no backgroundColor here — the React component handles
   // both light and dark backgrounds via Tailwind classes.
 
   document.body.appendChild(container);
@@ -134,7 +134,7 @@ async function createReadableView() {
   shadowRoot.appendChild(hostReset);
 
   // Show a plain-DOM loading indicator before the stylesheet loads or
-  // Preact mounts. This is intentionally not a Preact component — it
+  // React mounts. This is intentionally not a React component — it
   // needs to appear before the framework is ready.
   const loadingEl = document.createElement("div");
   loadingEl.textContent = "Loading article\u2026";
@@ -168,13 +168,14 @@ async function createReadableView() {
       isReadableViewOpen = false;
     };
 
-    appContainer = document.createElement("div");
+    const appContainer = document.createElement("div");
     shadowRoot.appendChild(appContainer);
+    reactRoot = createRoot(appContainer);
 
     if (!article) {
       // Readability couldn't extract content — still open the overlay so
       // the user gets feedback rather than a silent no-op.
-      render(
+      reactRoot.render(
         <ErrorBoundary onClose={onClose}>
           <ReadableContent
             title=""
@@ -184,14 +185,13 @@ async function createReadableView() {
             onClose={onClose}
           />
         </ErrorBoundary>,
-        appContainer,
       );
       return;
     }
 
     const sanitizedContent = DOMPurify.sanitize(article.content || "");
 
-    render(
+    reactRoot.render(
       <ErrorBoundary onClose={onClose}>
         <ReadableContent
           title={article.title || ""}
@@ -202,7 +202,6 @@ async function createReadableView() {
           onClose={onClose}
         />
       </ErrorBoundary>,
-      appContainer,
     );
   } catch (error) {
     console.error("Error creating readable view:", error);
@@ -223,13 +222,13 @@ function parseArticle() {
 }
 
 /**
- * Closes the readable view by unmounting Preact and removing the container
+ * Closes the readable view by unmounting React and removing the container
  * (which also removes the shadow DOM and all its contents).
  */
 function closeReadableView() {
-  if (appContainer) {
-    render(null, appContainer);
-    appContainer = null;
+  if (reactRoot) {
+    reactRoot.unmount();
+    reactRoot = null;
   }
 
   const container = document.getElementById("readable-container");

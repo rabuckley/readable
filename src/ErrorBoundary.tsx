@@ -1,8 +1,8 @@
-import { Component, type ComponentChildren } from "preact";
+import { Component, type ReactNode } from "react";
 
 interface ErrorBoundaryProps {
   onClose: () => void;
-  children: ComponentChildren;
+  children: ReactNode;
 }
 
 interface ErrorBoundaryState {
