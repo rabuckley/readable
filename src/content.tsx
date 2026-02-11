@@ -3,6 +3,7 @@ import { Readability } from "@mozilla/readability";
 import DOMPurify from "dompurify";
 import ReadableContent from "./ReadableContent";
 import ErrorBoundary from "./ErrorBoundary";
+import { loadSettings } from "./settings";
 
 // Track whether the readable view is currently open, and whether a
 // transition (open or close) is in progress to guard against rapid clicks.
@@ -119,10 +120,13 @@ async function createReadableView() {
   shadowRoot.appendChild(loadingEl);
 
   try {
-    // Start stylesheet loading and article parsing in parallel.
+    // Start stylesheet loading, settings loading, and article parsing in
+    // parallel. Settings load is fast (<5ms from chrome.storage.local) but
+    // we overlap it anyway.
     const cssURL = browserAPI.runtime.getURL("assets/content.css");
-    const [, article] = await Promise.all([
+    const [, settings, article] = await Promise.all([
       loadStylesheet(shadowRoot, cssURL),
+      loadSettings(),
       parseArticle(),
     ]);
 
@@ -146,6 +150,7 @@ async function createReadableView() {
             title=""
             content=""
             errorMessage="Couldn't extract article content from this page."
+            initialSettings={settings}
             onClose={onClose}
           />
         </ErrorBoundary>,
@@ -163,6 +168,7 @@ async function createReadableView() {
           content={sanitizedContent}
           byline={article.byline || undefined}
           siteName={article.siteName || undefined}
+          initialSettings={settings}
           onClose={onClose}
         />
       </ErrorBoundary>,

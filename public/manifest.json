@@ -5,7 +5,8 @@
   "description": "Extract article content and display it in a clean, readable format",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "action": {
     "default_title": "Make Readable"
