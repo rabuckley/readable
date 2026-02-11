@@ -1,4 +1,4 @@
-import React from "react";
+import type { FunctionalComponent } from "preact";
 
 interface ReadableContentProps {
   title: string;
@@ -8,7 +8,7 @@ interface ReadableContentProps {
   onClose: () => void;
 }
 
-const ReadableContent: React.FC<ReadableContentProps> = ({
+const ReadableContent: FunctionalComponent<ReadableContentProps> = ({
   title,
   content,
   byline,

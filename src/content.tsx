@@ -1,5 +1,4 @@
-import React from "react";
-import { Root, createRoot } from "react-dom/client";
+import { render } from "preact";
 import { Readability } from "@mozilla/readability";
 import DOMPurify from "dompurify";
 import ReadableContent from "./ReadableContent";
@@ -9,9 +8,9 @@ import ReadableContent from "./ReadableContent";
 let isReadableViewOpen = false;
 let isTransitioning = false;
 
-// Hold a reference to the React root so we can unmount it on close,
+// Hold a reference to the Preact app container so we can unmount on close,
 // avoiding a memory leak from orphaned subscriptions and internal state.
-let reactRoot: Root | null = null;
+let appContainer: HTMLElement | null = null;
 
 // Use browser namespace for Firefox compatibility
 declare const browser: typeof chrome;
@@ -108,26 +107,24 @@ async function createReadableView() {
     const cssURL = browserAPI.runtime.getURL("assets/content.css");
     await loadStylesheet(shadowRoot, cssURL);
 
-    // Create a container for our React app inside the shadow DOM
-    const appContainer = document.createElement("div");
+    // Create a container for the Preact app inside the shadow DOM.
+    appContainer = document.createElement("div");
     shadowRoot.appendChild(appContainer);
 
-    // Render the readable content. The close button lives inside the React
+    // Render the readable content. The close button lives inside the Preact
     // component so it can participate in Tailwind dark-mode styling.
-    reactRoot = createRoot(appContainer);
-    reactRoot.render(
-      <React.StrictMode>
-        <ReadableContent
-          title={article.title || ""}
-          content={sanitizedContent}
-          byline={article.byline || undefined}
-          siteName={article.siteName || undefined}
-          onClose={() => {
-            closeReadableView();
-            isReadableViewOpen = false;
-          }}
-        />
-      </React.StrictMode>,
+    render(
+      <ReadableContent
+        title={article.title || ""}
+        content={sanitizedContent}
+        byline={article.byline || undefined}
+        siteName={article.siteName || undefined}
+        onClose={() => {
+          closeReadableView();
+          isReadableViewOpen = false;
+        }}
+      />,
+      appContainer,
     );
   } catch (error) {
     console.error("Error creating readable view:", error);
@@ -136,13 +133,13 @@ async function createReadableView() {
 }
 
 /**
- * Closes the readable view by unmounting React and removing the container
+ * Closes the readable view by unmounting Preact and removing the container
  * (which also removes the shadow DOM and all its contents).
  */
 function closeReadableView() {
-  if (reactRoot) {
-    reactRoot.unmount();
-    reactRoot = null;
+  if (appContainer) {
+    render(null, appContainer);
+    appContainer = null;
   }
 
   const container = document.getElementById("readable-container");
