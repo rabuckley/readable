@@ -4,3 +4,8 @@
 @theme {
   --color-oat-50: oklch(0.98 0.005 95);
 }
+
+:focus-visible {
+  outline: 2px solid oklch(0.55 0.15 250);
+  outline-offset: 2px;
+}
