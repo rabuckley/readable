@@ -88,6 +88,8 @@ interface ReadableContentProps {
   errorMessage?: string;
   initialSettings: ReadableSettings;
   onClose: () => void;
+  onNavigate?: (url: string) => void;
+  onNavigateNewTab?: (url: string) => void;
 }
 
 /**
@@ -294,6 +296,8 @@ const ReadableContent: FC<ReadableContentProps> = ({
   errorMessage,
   initialSettings,
   onClose,
+  onNavigate,
+  onNavigateNewTab,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<ReadableSettings>(initialSettings);
@@ -308,6 +312,54 @@ const ReadableContent: FC<ReadableContentProps> = ({
       return { ...prev, fontSize: FONT_SIZES[next] };
     });
   }, []);
+
+  // Intercept link clicks inside the article body so users stay in reader
+  // mode when navigating. Regular clicks navigate in-place; modifier-clicks
+  // (Ctrl/Cmd) and middle-clicks open in a new tab, also in reader mode.
+  const handleArticleClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const isNewTabClick =
+        e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey;
+
+      // Nothing to do if we have no navigation handlers.
+      if (!onNavigate && !onNavigateNewTab) return;
+      if (isNewTabClick && !onNavigateNewTab) return;
+      if (!isNewTabClick && !onNavigate) return;
+
+      const anchor = (e.target as HTMLElement).closest("a");
+      if (!anchor) return;
+
+      let parsed: URL;
+      try {
+        parsed = new URL(anchor.href);
+      } catch {
+        return;
+      }
+
+      // Only intercept HTTP(S) links — let mailto:, tel:, etc. through.
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return;
+
+      // Same-page fragment-only links: just suppress navigation. The reader
+      // content may not have matching IDs, so scrolling would be misleading.
+      if (
+        parsed.origin === location.origin &&
+        parsed.pathname === location.pathname &&
+        parsed.hash &&
+        !parsed.search
+      ) {
+        e.preventDefault();
+        return;
+      }
+
+      e.preventDefault();
+      if (isNewTabClick) {
+        onNavigateNewTab!(parsed.href);
+      } else {
+        onNavigate!(parsed.href);
+      }
+    },
+    [onNavigate, onNavigateNewTab],
+  );
 
   useFocusTrap(containerRef, onClose, changeFontSize);
   useAutoTheme(containerRef, settings.theme);
@@ -513,7 +565,11 @@ const ReadableContent: FC<ReadableContentProps> = ({
               {readingTime > 0 && <span>{readingTime} min read</span>}
             </div>
           )}
-          <div dangerouslySetInnerHTML={{ __html: highlightedContent }} />
+          <div
+            onClick={handleArticleClick}
+            onAuxClick={handleArticleClick}
+            dangerouslySetInnerHTML={{ __html: highlightedContent }}
+          />
         </div>
       </div>
     </div>

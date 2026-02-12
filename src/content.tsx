@@ -27,6 +27,7 @@ browserAPI.runtime.onMessage.addListener((message: { action: string }) => {
     if (isReadableViewOpen) {
       closeReadableView();
       isReadableViewOpen = false;
+      browserAPI.runtime.sendMessage({ action: "exitReaderMode" });
     } else {
       isReadableViewOpen = true;
       isTransitioning = true;
@@ -166,6 +167,23 @@ async function createReadableView() {
     const onClose = () => {
       closeReadableView();
       isReadableViewOpen = false;
+      browserAPI.runtime.sendMessage({ action: "exitReaderMode" });
+    };
+
+    // Navigate in-place while asking the background script to re-activate
+    // reader mode once the new page has loaded.
+    const onNavigate = (url: string) => {
+      closeReadableView();
+      isReadableViewOpen = false;
+      browserAPI.runtime.sendMessage({ action: "navigateInReaderMode", url });
+    };
+
+    // Open a link in a new tab with reader mode active.
+    const onNavigateNewTab = (url: string) => {
+      browserAPI.runtime.sendMessage({
+        action: "openInReaderModeNewTab",
+        url,
+      });
     };
 
     const appContainer = document.createElement("div");
@@ -200,6 +218,8 @@ async function createReadableView() {
           siteName={article.siteName || undefined}
           initialSettings={settings}
           onClose={onClose}
+          onNavigate={onNavigate}
+          onNavigateNewTab={onNavigateNewTab}
         />
       </ErrorBoundary>,
     );
