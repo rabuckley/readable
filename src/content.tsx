@@ -27,7 +27,10 @@ browserAPI.runtime.onMessage.addListener((message: { action: string }) => {
     if (isReadableViewOpen) {
       closeReadableView();
       isReadableViewOpen = false;
-      browserAPI.runtime.sendMessage({ action: "exitReaderMode" });
+      browserAPI.runtime.sendMessage({ action: "exitReaderMode" }).catch(
+        (err: unknown) =>
+          console.warn("Failed to send exitReaderMode:", err),
+      );
     } else {
       isReadableViewOpen = true;
       isTransitioning = true;
@@ -167,23 +170,34 @@ async function createReadableView() {
     const onClose = () => {
       closeReadableView();
       isReadableViewOpen = false;
-      browserAPI.runtime.sendMessage({ action: "exitReaderMode" });
+      browserAPI.runtime.sendMessage({ action: "exitReaderMode" }).catch(
+        (err: unknown) =>
+          console.warn("Failed to send exitReaderMode:", err),
+      );
     };
 
     // Navigate in-place while asking the background script to re-activate
-    // reader mode once the new page has loaded.
+    // reader mode once the new page has loaded. We don't tear down the
+    // overlay here — tabs.update() destroys the page anyway, and explicit
+    // teardown causes a flash of the original content.
     const onNavigate = (url: string) => {
-      closeReadableView();
-      isReadableViewOpen = false;
-      browserAPI.runtime.sendMessage({ action: "navigateInReaderMode", url });
+      browserAPI.runtime
+        .sendMessage({ action: "navigateInReaderMode", url })
+        .catch((err: unknown) =>
+          console.warn("Failed to send navigateInReaderMode:", err),
+        );
     };
 
     // Open a link in a new tab with reader mode active.
     const onNavigateNewTab = (url: string) => {
-      browserAPI.runtime.sendMessage({
-        action: "openInReaderModeNewTab",
-        url,
-      });
+      browserAPI.runtime
+        .sendMessage({
+          action: "openInReaderModeNewTab",
+          url,
+        })
+        .catch((err: unknown) =>
+          console.warn("Failed to send openInReaderModeNewTab:", err),
+        );
     };
 
     const appContainer = document.createElement("div");

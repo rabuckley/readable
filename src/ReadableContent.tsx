@@ -316,18 +316,19 @@ const ReadableContent: FC<ReadableContentProps> = ({
   // Intercept link clicks inside the article body so users stay in reader
   // mode when navigating. Regular clicks navigate in-place; modifier-clicks
   // (Ctrl/Cmd) and middle-clicks open in a new tab, also in reader mode.
+  // Shift+click is intentionally not intercepted — browsers open a new
+  // window natively and we shouldn't override that.
   const handleArticleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const isNewTabClick =
-        e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey;
+      const anchor = (e.target as HTMLElement).closest("a");
+      if (!anchor) return;
+
+      const isNewTabClick = e.button === 1 || e.ctrlKey || e.metaKey;
 
       // Nothing to do if we have no navigation handlers.
       if (!onNavigate && !onNavigateNewTab) return;
       if (isNewTabClick && !onNavigateNewTab) return;
       if (!isNewTabClick && !onNavigate) return;
-
-      const anchor = (e.target as HTMLElement).closest("a");
-      if (!anchor) return;
 
       let parsed: URL;
       try {
@@ -341,11 +342,12 @@ const ReadableContent: FC<ReadableContentProps> = ({
 
       // Same-page fragment-only links: just suppress navigation. The reader
       // content may not have matching IDs, so scrolling would be misleading.
+      // TODO: Attempt to scroll to the fragment target if the ID exists in the rendered reader content.
       if (
         parsed.origin === location.origin &&
         parsed.pathname === location.pathname &&
         parsed.hash &&
-        !parsed.search
+        parsed.search === location.search
       ) {
         e.preventDefault();
         return;
@@ -359,6 +361,20 @@ const ReadableContent: FC<ReadableContentProps> = ({
       }
     },
     [onNavigate, onNavigateNewTab],
+  );
+
+  // Prevent the browser's default middle-click behaviour (open link in new
+  // tab) so we don't get a duplicate tab alongside the one opened by our
+  // handleArticleClick handler.
+  const handleArticleMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.button !== 1) return;
+      const anchor = (e.target as HTMLElement).closest("a");
+      if (anchor) {
+        e.preventDefault();
+      }
+    },
+    [],
   );
 
   useFocusTrap(containerRef, onClose, changeFontSize);
@@ -442,7 +458,7 @@ const ReadableContent: FC<ReadableContentProps> = ({
       <TooltipProvider delayDuration={200}>
         <nav
           aria-label="Reading settings"
-          className="border-border fixed top-0 left-0 z-10000 flex h-full w-12 flex-col items-center justify-center gap-1.5 border-r bg-neutral-100/90 backdrop-blur-sm dark:bg-neutral-800/90"
+          className="border-border fixed top-0 left-0 z-10000 flex h-full w-12 flex-col items-center justify-center gap-1.5 border-r bg-white backdrop-blur-sm dark:bg-neutral-800/90"
         >
           {/* Font size controls */}
           <Tooltip>
@@ -550,7 +566,7 @@ const ReadableContent: FC<ReadableContentProps> = ({
         }}
       >
         <div
-          className="prose prose-neutral dark:prose-invert md:prose-lg prose-blockquote:not-italic prose-headings:font-semibold prose-headings:font-sans prose-lead:text-neutral-900 dark:prose-lead:text-neutral-300 prose-pre:bg-neutral-100 prose-pre:text-neutral-800 dark:prose-pre:text-neutral-300 dark:prose-pre:bg-neutral-800 prose-code:font-medium prose-code:font-mono col-span-1 col-start-2 my-12 max-w-none font-serif"
+          className="prose prose-neutral dark:prose-invert prose-blockquote:not-italic prose-headings:font-semibold prose-headings:font-sans prose-lead:text-neutral-900 dark:prose-lead:text-neutral-300 prose-pre:bg-white prose-pre:text-neutral-800 dark:prose-pre:text-neutral-300 dark:prose-pre:bg-neutral-800 prose-code:font-medium prose-code:font-mono col-span-1 col-start-2 my-12 max-w-none font-serif"
           style={{ fontSize: FONT_SIZE_VALUES[settings.fontSize] }}
         >
           <h1>{title}</h1>
@@ -568,6 +584,7 @@ const ReadableContent: FC<ReadableContentProps> = ({
           <div
             onClick={handleArticleClick}
             onAuxClick={handleArticleClick}
+            onMouseDown={handleArticleMouseDown}
             dangerouslySetInnerHTML={{ __html: highlightedContent }}
           />
         </div>
